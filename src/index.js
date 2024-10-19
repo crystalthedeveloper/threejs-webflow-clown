@@ -14,7 +14,6 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    // Instead of appending to body, append to the container div
     container.appendChild(renderer.domElement);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -57,11 +56,12 @@ function init() {
 
                 mixer = new THREE.AnimationMixer(clown);
                 gltf.animations.forEach((clip) => {
-                    animations[clip.name.toLowerCase()] = mixer.clipAction(clip);
-                    console.log(`Loaded animation: ${clip.name.toLowerCase()}`);
+                    const animationName = clip.name.toLowerCase();
+                    animations[animationName] = mixer.clipAction(clip);
+                    console.log(`Loaded animation: ${animationName}`);
                 });
 
-                playAnimation('idle');
+                playAnimation('idle'); // Ensure the first animation starts after loading the model
                 scene.add(clown);
                 controls.target.set(0, 1.5, 0);
                 controls.update();
@@ -109,10 +109,17 @@ function cameraFollow(target) {
 }
 
 function playAnimation(name) {
+    console.log(`Trying to play animation: ${name}`);
     mixer.stopAllAction();
     if (animations[name]) {
+        console.log(`Playing animation: ${name}`);
         animations[name].play();
         isWalking = name === 'walk';
+    } else if (name !== 'idle') { // Avoid recursion for 'idle'
+        console.log(`Animation '${name}' not found, playing 'idle' instead.`);
+        playAnimation('idle');
+    } else {
+        console.log(`'idle' animation not found.`);
     }
 }
 
