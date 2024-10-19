@@ -137,8 +137,11 @@ init();
 
 // IntersectionObserver to trigger animations based on section scroll
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM fully loaded and parsed');
+    
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
+            console.log(`Observing section with ID: ${entry.target.id}, isIntersecting: ${entry.isIntersecting}`);
             if (entry.isIntersecting) {
                 const sectionId = entry.target.id;
                 console.log(`Section ${sectionId} is visible`);
@@ -146,31 +149,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Check if the section ID exists and play the corresponding animation
                 switch (sectionId) {
                     case 'hello':
+                        console.log('Playing animation: hello');
                         playAnimation('hello');
                         break;
                     case 'giveaway':
+                        console.log('Playing animation: break');
                         playAnimation('break');
                         break;
                     case 'capabilities':
+                        console.log('Playing animation: pose');
                         playAnimation('pose');
                         break;
                     case 'store':
+                        console.log('Playing animation: walk');
                         playAnimation('walk');
                         break;
                     case 'thanks':
+                        console.log('Playing animation: thanks');
                         playAnimation('thanks');
                         break;
                     case 'contactForm':
+                        console.log('Playing animation: phone');
                         playAnimation('phone');
                         break;
                     default:
                         console.log(`No animation for section: ${sectionId}`);
                 }
+            } else {
+                console.log(`Section ${entry.target.id} is not visible`);
             }
         });
     });
 
     // Observe all divs with IDs directly
     const sections = document.querySelectorAll('div[id]');
-    sections.forEach(section => observer.observe(section));
+    sections.forEach(section => {
+        console.log(`Adding observer to section with ID: ${section.id}`);
+        observer.observe(section);
+    });
 });
