@@ -141,6 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const sectionId = entry.target.id;
+                console.log(`Section ${sectionId} is visible`);
+
+                // Check if the section ID exists and play the corresponding animation
                 switch (sectionId) {
                     case 'hello':
                         playAnimation('hello');
@@ -167,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Observe all sections
-    const sections = document.querySelectorAll('section');
+    // Observe all divs with IDs directly
+    const sections = document.querySelectorAll('div[id]');
     sections.forEach(section => observer.observe(section));
 });
