@@ -5,12 +5,17 @@ const animations = {};
 const cameraFollowOffset = new THREE.Vector3(0, 1, 5);
 
 function init() {
+    // Get the container div from the DOM
+    const container = document.getElementById('threejs-container');
+
+    // Set up the renderer and append it to the container div
     renderer = new THREE.WebGLRenderer({ antialias: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
+    // Instead of appending to body, append to the container div
+    container.appendChild(renderer.domElement);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, -1, 5);
@@ -119,8 +124,12 @@ function animate() {
 }
 
 function onWindowResize() {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const container = document.getElementById('threejs-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    renderer.setSize(width, height);
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
 }
 
