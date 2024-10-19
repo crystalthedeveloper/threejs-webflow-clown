@@ -110,18 +110,29 @@ function cameraFollow(target) {
 
 function playAnimation(name) {
     console.log(`Trying to play animation: ${name}`);
+    
+    // Ensure mixer and animations are properly initialized
+    if (!mixer || !animations) {
+        console.log('Mixer or animations not initialized.');
+        return;
+    }
+
     mixer.stopAllAction();
+
     if (animations[name]) {
         console.log(`Playing animation: ${name}`);
         animations[name].play();
         isWalking = name === 'walk';
-    } else if (name !== 'idle') { // Avoid recursion for 'idle'
-        console.log(`Animation '${name}' not found, playing 'idle' instead.`);
-        playAnimation('idle');
     } else {
-        console.log(`'idle' animation not found.`);
+        console.log(`Animation '${name}' not found, playing 'idle' instead.`);
+        if (animations['idle']) {
+            animations['idle'].play();
+        } else {
+            console.log(`'idle' animation not found.`);
+        }
     }
 }
+
 
 function animate() {
     requestAnimationFrame(animate);
