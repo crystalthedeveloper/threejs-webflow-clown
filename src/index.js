@@ -58,6 +58,7 @@ function init() {
                 mixer = new THREE.AnimationMixer(clown);
                 gltf.animations.forEach((clip) => {
                     animations[clip.name.toLowerCase()] = mixer.clipAction(clip);
+                    console.log(`Loaded animation: ${clip.name.toLowerCase()}`);
                 });
 
                 playAnimation('idle');
@@ -138,7 +139,14 @@ init();
 // IntersectionObserver to trigger animations based on section scroll
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded and parsed');
-    
+
+    const sections = document.querySelectorAll('div[id]');
+    if (sections.length === 0) {
+        console.log('No sections with IDs found.');
+    } else {
+        console.log(`Found ${sections.length} sections with IDs.`);
+    }
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             console.log(`Observing section with ID: ${entry.target.id}, isIntersecting: ${entry.isIntersecting}`);
@@ -181,8 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Observe all divs with IDs directly
-    const sections = document.querySelectorAll('div[id]');
     sections.forEach(section => {
         console.log(`Adding observer to section with ID: ${section.id}`);
         observer.observe(section);
