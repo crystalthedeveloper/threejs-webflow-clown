@@ -3,6 +3,7 @@ import * as THREE from 'three';
 let scene, camera, renderer, controls, clown, mixer, clock, isWalking = false;
 const animations = {};
 const cameraFollowOffset = new THREE.Vector3(0, 1, 5);
+let currentAnimation = null; // To avoid re-triggering the same animation
 
 function init() {
     // Get the container div from the DOM
@@ -112,31 +113,30 @@ function playAnimation(name) {
     console.log(`Trying to play animation: ${name}`);
     
     // Ensure mixer and animations are properly initialized
-    if (!mixer || !animations) {
-        console.log('Mixer or animations not initialized.');
+    if (!mixer || !animations[name]) {
+        console.log(`Animation '${name}' is not initialized or found.`);
         return;
     }
 
-    mixer.stopAllAction();
-
-    if (animations[name]) {
-        console.log(`Playing animation: ${name}`);
-        animations[name].play();
-        isWalking = name === 'walk';
-    } else {
-        console.log(`Animation '${name}' not found, playing 'idle' instead.`);
-        if (animations['idle']) {
-            animations['idle'].play();
-        } else {
-            console.log(`'idle' animation not found.`);
-        }
+    // Check if the requested animation is already playing
+    if (currentAnimation === name) {
+        console.log(`Animation '${name}' is already playing.`);
+        return;
     }
-}
 
+    mixer.stopAllAction(); // Stop previous animations
+    currentAnimation = name; // Set current animation
+
+    // Play the new animation
+    console.log(`Playing animation: ${name}`);
+    animations[name].reset().play();
+    isWalking = name === 'walk';
+}
 
 function animate() {
     requestAnimationFrame(animate);
-    if (mixer) mixer.update(clock.getDelta());
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
     if (isWalking && clown) cameraFollow(clown);
     controls.update();
     renderer.render(scene, camera);
@@ -175,40 +175,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Check if the section ID exists and play the corresponding animation
                 switch (sectionId) {
                     case 'hello':
-                        console.log('Playing animation: hello');
                         playAnimation('hello');
                         break;
                     case 'giveaway':
-                        console.log('Playing animation: break');
                         playAnimation('break');
                         break;
                     case 'capabilities':
-                        console.log('Playing animation: pose');
                         playAnimation('pose');
                         break;
                     case 'store':
-                        console.log('Playing animation: walk');
                         playAnimation('walk');
                         break;
                     case 'thanks':
-                        console.log('Playing animation: thanks');
                         playAnimation('thanks');
                         break;
                     case 'contactForm':
-                        console.log('Playing animation: phone');
                         playAnimation('phone');
                         break;
                     default:
-                        console.log(`No animation for section: ${sectionId}`);
+                        console.log(`No animation found for section: ${sectionId}`);
                 }
-            } else {
-                console.log(`Section ${entry.target.id} is not visible`);
             }
         });
     });
 
     sections.forEach(section => {
-        console.log(`Adding observer to section with ID: ${section.id}`);
         observer.observe(section);
     });
 });
