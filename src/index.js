@@ -40,7 +40,7 @@ function init() {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
             loader.setDRACOLoader(dracoLoader);
 
-            loader.load('/clownV.glb', (gltf) => {
+            loader.load('/public/clownV.glb', (gltf) => {
                 clown = gltf.scene;
                 clown.position.set(0, 0.02, 0);
                 clown.scale.set(1.5, 1.5, 1.5);
