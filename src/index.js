@@ -1,27 +1,39 @@
-import * as THREE from 'three';
-
+// Three.js Initialization and Rendering Code
 let scene, camera, renderer, controls, clown, mixer, clock, isWalking = false;
 const animations = {};
 const cameraFollowOffset = new THREE.Vector3(0, 1, 5);
-let currentAnimation = null; // To avoid re-triggering the same animation
+let currentAnimation = null;
 
 function init() {
-    // Get the container div from the DOM
-    const container = document.getElementById('threejs-container');
+    console.log('Initializing Three.js scene...');
 
-    // Set up the renderer and append it to the container div
+    // Get the container element
+    const container = document.getElementById('threejs-container');
+    console.log('Container element:', container);
+
+    if (!container) {
+        console.error('Error: Container with ID "threejs-container" not found!');
+        return; // Stop execution if the container is not found
+    }
+
+    // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: false });
+    console.log('Renderer created.');
+    
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
+    // Camera setup
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, -1, 5);
+    console.log('Camera setup complete.');
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000);
+    console.log('Scene created.');
 
     const floor = new THREE.Mesh(
         new THREE.BoxGeometry(2000, 0.1, 2000),
@@ -29,56 +41,55 @@ function init() {
     );
     floor.receiveShadow = true;
     scene.add(floor);
+    console.log('Floor added to scene.');
 
     clock = new THREE.Clock();
+    console.log('Clock initialized.');
 
     // Load the clown model lazily
-    import('three/examples/jsm/loaders/GLTFLoader.js').then(({ GLTFLoader }) => {
-        const loader = new GLTFLoader();
-        import('three/examples/jsm/loaders/DRACOLoader.js').then(({ DRACOLoader }) => {
-            const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-            loader.setDRACOLoader(dracoLoader);
+    const loader = new THREE.GLTFLoader();
+    const dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    loader.setDRACOLoader(dracoLoader);
+    console.log('GLTFLoader and DRACOLoader set up.');
 
-            loader.load('/public/clownV.glb', (gltf) => {
-                clown = gltf.scene;
-                clown.position.set(0, 0.02, 0);
-                clown.scale.set(1.5, 1.5, 1.5);
+    loader.load('https://threejs-webflow-clown.vercel.app/public/clownV.glb', (gltf) => {
+        clown = gltf.scene;
+        clown.position.set(0, 0.02, 0);
+        clown.scale.set(1.5, 1.5, 1.5);
+        console.log('Clown model loaded.');
 
-                clown.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        if (child.material && child.material.isMeshStandardMaterial) {
-                            child.material.roughness = 0.6;
-                            child.material.metalness = 0.2;
-                        }
-                    }
-                });
-
-                mixer = new THREE.AnimationMixer(clown);
-                gltf.animations.forEach((clip) => {
-                    const animationName = clip.name.toLowerCase();
-                    animations[animationName] = mixer.clipAction(clip);
-                    console.log(`Loaded animation: ${animationName}`);
-                });
-
-                playAnimation('idle'); // Ensure the first animation starts after loading the model
-                scene.add(clown);
-                controls.target.set(0, 1.5, 0);
-                controls.update();
-            });
+        clown.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                if (child.material && child.material.isMeshStandardMaterial) {
+                    child.material.roughness = 0.6;
+                    child.material.metalness = 0.2;
+                }
+            }
         });
+
+        mixer = new THREE.AnimationMixer(clown);
+        gltf.animations.forEach((clip) => {
+            const animationName = clip.name.toLowerCase();
+            animations[animationName] = mixer.clipAction(clip);
+            console.log(`Loaded animation: ${animationName}`);
+        });
+
+        playAnimation('idle');
+        scene.add(clown);
+        controls.target.set(0, 1.5, 0);
+        controls.update();
     });
 
-    // Load OrbitControls lazily
-    import('three/examples/jsm/controls/OrbitControls.js').then(({ OrbitControls }) => {
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.25;
-        controls.minDistance = 4;
-        controls.maxDistance = 20;
-        controls.maxPolarAngle = Math.PI / 2;
-    });
+    // OrbitControls setup
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+    controls.minDistance = 4;
+    controls.maxDistance = 20;
+    controls.maxPolarAngle = Math.PI / 2;
+    console.log('OrbitControls set up.');
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
     directionalLight.position.set(5, 10, 10);
@@ -95,42 +106,26 @@ function init() {
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
+    console.log('Lights added to scene.');
     animate();
     window.addEventListener('resize', onWindowResize);
 }
 
-function cameraFollow(target) {
-    const modelPos = target.position;
-    camera.position.set(
-        modelPos.x + cameraFollowOffset.x,
-        modelPos.y + cameraFollowOffset.y,
-        modelPos.z + cameraFollowOffset.z
-    );
-    camera.lookAt(modelPos);
-}
-
 function playAnimation(name) {
-    console.log(`Trying to play animation: ${name}`);
-    
-    // Ensure mixer and animations are properly initialized
     if (!mixer || !animations[name]) {
         console.log(`Animation '${name}' is not initialized or found.`);
         return;
     }
 
-    // Check if the requested animation is already playing
     if (currentAnimation === name) {
-        console.log(`Animation '${name}' is already playing.`);
         return;
     }
 
-    mixer.stopAllAction(); // Stop previous animations
-    currentAnimation = name; // Set current animation
-
-    // Play the new animation
-    console.log(`Playing animation: ${name}`);
+    mixer.stopAllAction();
+    currentAnimation = name;
     animations[name].reset().play();
     isWalking = name === 'walk';
+    console.log(`Playing animation: ${name}`);
 }
 
 function animate() {
@@ -144,12 +139,18 @@ function animate() {
 
 function onWindowResize() {
     const container = document.getElementById('threejs-container');
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    console.log('Window resized. Resizing renderer.');
 
-    renderer.setSize(width, height);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    if (container) {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+    } else {
+        console.error('Container element not found during resize.');
+    }
 }
 
 init();
@@ -172,8 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sectionId = entry.target.id;
                 console.log(`Section ${sectionId} is visible`);
 
-                // Check if the section ID exists and play the corresponding animation
                 switch (sectionId) {
+                    case 'hero':
+                        playAnimation('idle');
+                        break;
                     case 'hello':
                         playAnimation('hello');
                         break;
