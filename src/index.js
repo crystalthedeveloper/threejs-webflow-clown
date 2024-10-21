@@ -3,23 +3,15 @@ let scene, camera, renderer, controls, clown, mixer, clock, isWalking = false;
 const animations = {};
 const cameraFollowOffset = new THREE.Vector3(0, 1, 5);
 let currentAnimation = null;
+let modelLoaded = false; // Flag to check if the model has been loaded
 
 function init() {
-    console.log('Initializing Three.js scene...');
-
     // Get the container element
     const container = document.getElementById('threejs-container');
-    console.log('Container element:', container);
-
-    if (!container) {
-        console.error('Error: Container with ID "threejs-container" not found!');
-        return; // Stop execution if the container is not found
-    }
+    if (!container) return;
 
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: false });
-    console.log('Renderer created.');
-    
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -29,11 +21,9 @@ function init() {
     // Camera setup
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, -1, 5);
-    console.log('Camera setup complete.');
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000);
-    console.log('Scene created.');
 
     const floor = new THREE.Mesh(
         new THREE.BoxGeometry(2000, 0.1, 2000),
@@ -41,23 +31,19 @@ function init() {
     );
     floor.receiveShadow = true;
     scene.add(floor);
-    console.log('Floor added to scene.');
 
     clock = new THREE.Clock();
-    console.log('Clock initialized.');
 
     // Load the clown model lazily
     const loader = new THREE.GLTFLoader();
     const dracoLoader = new THREE.DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     loader.setDRACOLoader(dracoLoader);
-    console.log('GLTFLoader and DRACOLoader set up.');
 
     loader.load('https://threejs-webflow-clown.vercel.app/public/clownV.glb', (gltf) => {
         clown = gltf.scene;
         clown.position.set(0, 0.02, 0);
         clown.scale.set(1.5, 1.5, 1.5);
-        console.log('Clown model loaded.');
 
         clown.traverse((child) => {
             if (child.isMesh) {
@@ -73,13 +59,19 @@ function init() {
         gltf.animations.forEach((clip) => {
             const animationName = clip.name.toLowerCase();
             animations[animationName] = mixer.clipAction(clip);
-            console.log(`Loaded animation: ${animationName}`);
         });
 
+        // Mark that the model is loaded
+        modelLoaded = true;
+
+        // Start the default animation
         playAnimation('idle');
         scene.add(clown);
         controls.target.set(0, 1.5, 0);
         controls.update();
+
+        // Start observing sections after the model is loaded
+        observeSections();
     });
 
     // OrbitControls setup
@@ -89,7 +81,6 @@ function init() {
     controls.minDistance = 4;
     controls.maxDistance = 20;
     controls.maxPolarAngle = Math.PI / 2;
-    console.log('OrbitControls set up.');
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
     directionalLight.position.set(5, 10, 10);
@@ -106,26 +97,30 @@ function init() {
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
-    console.log('Lights added to scene.');
     animate();
     window.addEventListener('resize', onWindowResize);
 }
 
-function playAnimation(name) {
-    if (!mixer || !animations[name]) {
-        console.log(`Animation '${name}' is not initialized or found.`);
-        return;
-    }
+// Function to follow the clown character with the camera
+function cameraFollow(target) {
+    const modelPos = target.position;
+    camera.position.set(
+        modelPos.x + cameraFollowOffset.x,
+        modelPos.y + cameraFollowOffset.y,
+        modelPos.z + cameraFollowOffset.z
+    );
+    camera.lookAt(modelPos);
+}
 
-    if (currentAnimation === name) {
-        return;
-    }
+function playAnimation(name) {
+    if (!mixer || !animations[name]) return;
+
+    if (currentAnimation === name) return;
 
     mixer.stopAllAction();
     currentAnimation = name;
     animations[name].reset().play();
     isWalking = name === 'walk';
-    console.log(`Playing animation: ${name}`);
 }
 
 function animate() {
@@ -139,8 +134,6 @@ function animate() {
 
 function onWindowResize() {
     const container = document.getElementById('threejs-container');
-    console.log('Window resized. Resizing renderer.');
-
     if (container) {
         const width = container.clientWidth;
         const height = container.clientHeight;
@@ -148,30 +141,17 @@ function onWindowResize() {
         renderer.setSize(width, height);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
-    } else {
-        console.error('Container element not found during resize.');
     }
 }
 
-init();
-
-// IntersectionObserver to trigger animations based on section scroll
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed');
-
-    const sections = document.querySelectorAll('div[id]');
-    if (sections.length === 0) {
-        console.log('No sections with IDs found.');
-    } else {
-        console.log(`Found ${sections.length} sections with IDs.`);
-    }
+// Function to observe sections only after model is loaded
+function observeSections() {
+    const sections = document.querySelectorAll('section[id]');
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            console.log(`Observing section with ID: ${entry.target.id}, isIntersecting: ${entry.isIntersecting}`);
-            if (entry.isIntersecting) {
+            if (entry.isIntersecting && modelLoaded) {
                 const sectionId = entry.target.id;
-                console.log(`Section ${sectionId} is visible`);
 
                 switch (sectionId) {
                     case 'hero':
@@ -180,29 +160,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'hello':
                         playAnimation('hello');
                         break;
-                    case 'giveaway':
+                    case 'dance-wrapper':
                         playAnimation('break');
                         break;
-                    case 'capabilities':
-                        playAnimation('pose');
-                        break;
-                    case 'store':
+                    case 'capabilities-wrapper':
                         playAnimation('walk');
                         break;
-                    case 'thanks':
+                    case 'services-wrapper':
+                        playAnimation('pose');
+                        break;
+                    case 'testimonials':
                         playAnimation('thanks');
                         break;
                     case 'contactForm':
                         playAnimation('phone');
                         break;
-                    default:
-                        console.log(`No animation found for section: ${sectionId}`);
                 }
             }
         });
+    }, {
+        rootMargin: '0px 0px -100px 0px',
+        threshold: 0.1
     });
 
     sections.forEach(section => {
         observer.observe(section);
     });
-});
+}
+
+init();
