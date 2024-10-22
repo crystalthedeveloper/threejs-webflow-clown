@@ -36,13 +36,45 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000);
 
-            // Add a floor
+            // Load textures for the floor
+            const textureLoader = new THREE.TextureLoader();
+
+            const diffuseMap = textureLoader.load('/public/textures/aerial_rocks_02_diff_2k.jpg');
+            diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
+            diffuseMap.repeat.set(50, 50);  // Adjust tiling
+
+            const roughnessMap = textureLoader.load('/public/textures/aerial_rocks_02_rough_2k.jpg');
+            roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+            roughnessMap.repeat.set(100, 100);  // Adjust tiling
+
+            const normalMap = textureLoader.load('/public/textures/aerial_rocks_02_nor_gl_2k.exr');
+            normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+            normalMap.repeat.set(100, 100);  // Adjust tiling
+
+            const displacementMap = textureLoader.load('/public/textures/aerial_rocks_02_disp_2k.png');
+            displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
+            displacementMap.repeat.set(100, 100);  // Adjust tiling
+
+            // Apply these textures to the material
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                map: diffuseMap,            // Base color texture
+                roughnessMap: roughnessMap,  // Roughness map for realistic surface details
+                normalMap: normalMap,        // Normal map for added depth and lighting interaction
+                displacementMap: displacementMap,  // Displacement map for geometry adjustments
+                displacementScale: 0.1,      // Adjust this value to control the intensity of the displacement
+                roughness: 0.8,              // General roughness (complemented by roughnessMap)
+                metalness: 0.0               // Adjust metalness based on your scene requirements
+            });
+
+            // Create the floor geometry and apply the material
             const floor = new THREE.Mesh(
-                new THREE.BoxGeometry(2000, 0.1, 2000),
-                new THREE.MeshStandardMaterial({ color: 0x1f2022, roughness: 0.8, metalness: 0.8 })
+                new THREE.PlaneGeometry(2000, 2000, 512, 512),
+                floorMaterial
             );
             floor.receiveShadow = true;
+            floor.rotation.x = - Math.PI / 2; // Lay the plane flat
             scene.add(floor);
+
 
             // Clock for animations
             clock = new THREE.Clock();
@@ -91,7 +123,7 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.25;
-            controls.minDistance = 4;
+            controls.minDistance = 5;
             controls.maxDistance = 20;
             controls.maxPolarAngle = Math.PI / 2;
 

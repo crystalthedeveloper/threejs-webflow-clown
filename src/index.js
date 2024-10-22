@@ -28,10 +28,21 @@ function init() {
     // Load textures for the floor
     const textureLoader = new THREE.TextureLoader();
 
-    const diffuseMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_diff_2k.jpg');
-    const roughnessMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_rough_2k.exr');
-    const normalMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_nor_gl_2k.exr');
-    const displacementMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_disp_2k.png');
+    const diffuseMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_diff_2k.jpg');
+    diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
+    diffuseMap.repeat.set(50, 50);  // Adjust tiling
+
+    const roughnessMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_rough_2k.jpg');
+    roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+    roughnessMap.repeat.set(100, 100);  // Adjust tiling
+
+    const normalMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_nor_gl_2k.exr');
+    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+    normalMap.repeat.set(100, 100);  // Adjust tiling
+
+    const displacementMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_disp_2k.png');
+    displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
+    displacementMap.repeat.set(100, 100);  // Adjust tiling
 
     // Apply these textures to the material
     const floorMaterial = new THREE.MeshStandardMaterial({
@@ -50,7 +61,7 @@ function init() {
         floorMaterial
     );
     floor.receiveShadow = true;
-    floor.rotation.x = - Math.PI / 2;
+    floor.rotation.x = - Math.PI / 2; // Lay the plane flat
     scene.add(floor);
 
     clock = new THREE.Clock();
@@ -99,7 +110,7 @@ function init() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
-    controls.minDistance = 4;
+    controls.minDistance = 5;
     controls.maxDistance = 20;
     controls.maxPolarAngle = Math.PI / 2;
 
