@@ -20,7 +20,7 @@ function init() {
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, -1, 5);
+    camera.position.set(0, -2, 5);
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000);
@@ -28,19 +28,19 @@ function init() {
     // Load textures for the floor
     const textureLoader = new THREE.TextureLoader();
 
-    const diffuseMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_diff_2k.jpg');
+    const diffuseMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/painted_concrete_diff_2k.jpg');
     diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
     diffuseMap.repeat.set(50, 50);  // Adjust tiling
 
-    const roughnessMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_rough_2k.jpg');
+    const roughnessMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/painted_concrete_rough_2k.exr');
     roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
     roughnessMap.repeat.set(100, 100);  // Adjust tiling
 
-    const normalMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_nor_gl_2k.exr');
+    const normalMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/painted_concrete_nor_gl_2k.exr');
     normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
     normalMap.repeat.set(100, 100);  // Adjust tiling
 
-    const displacementMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/aerial_rocks_02_disp_2k.png');
+    const displacementMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/painted_concrete_disp_2k.png');
     displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
     displacementMap.repeat.set(100, 100);  // Adjust tiling
 
@@ -51,8 +51,8 @@ function init() {
         normalMap: normalMap,        // Normal map for added depth and lighting interaction
         displacementMap: displacementMap,  // Displacement map for geometry adjustments
         displacementScale: 0.1,      // Adjust this value to control the intensity of the displacement
-        roughness: 0.8,              // General roughness (complemented by roughnessMap)
-        metalness: 0.0               // Adjust metalness based on your scene requirements
+        roughness: 0.1,              // General roughness (complemented by roughnessMap)
+        metalness: 0.4               // Adjust metalness based on your scene requirements
     });
 
     // Create the floor geometry and apply the material
