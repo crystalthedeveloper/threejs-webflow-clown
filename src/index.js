@@ -25,11 +25,32 @@ function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000);
 
+    // Load textures for the floor
+    const textureLoader = new THREE.TextureLoader();
+
+    const diffuseMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_diff_2k.jpg');
+    const roughnessMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_rough_2k.exr');
+    const normalMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_nor_gl_2k.exr');
+    const displacementMap = textureLoader.load('https://threejs-webflow-clown.vercel.app/public/textures/cliff_side_disp_2k.png');
+
+    // Apply these textures to the material
+    const floorMaterial = new THREE.MeshStandardMaterial({
+        map: diffuseMap,            // Base color texture
+        roughnessMap: roughnessMap,  // Roughness map for realistic surface details
+        normalMap: normalMap,        // Normal map for added depth and lighting interaction
+        displacementMap: displacementMap,  // Displacement map for geometry adjustments
+        displacementScale: 0.1,      // Adjust this value to control the intensity of the displacement
+        roughness: 0.8,              // General roughness (complemented by roughnessMap)
+        metalness: 0.0               // Adjust metalness based on your scene requirements
+    });
+
+    // Create the floor geometry and apply the material
     const floor = new THREE.Mesh(
-        new THREE.BoxGeometry(2000, 0.1, 2000),
-        new THREE.MeshStandardMaterial({ color: 0x1f2022, roughness: 0.8, metalness: 0.8 })
+        new THREE.PlaneGeometry(2000, 2000, 512, 512),
+        floorMaterial
     );
     floor.receiveShadow = true;
+    floor.rotation.x = - Math.PI / 2;
     scene.add(floor);
 
     clock = new THREE.Clock();
