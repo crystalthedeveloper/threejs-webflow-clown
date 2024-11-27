@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Three.js Scary Clown Scene</title>
-    <!-- Include Three.js, GLTFLoader, DRACOLoader, and OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
@@ -15,82 +14,53 @@
 <body style="margin: 0; overflow: hidden; background-color: #000;">
 
     <script>
+        // Three.js Initialization and Rendering Code
         let scene, camera, renderer, controls, clown, mixer, clock, isWalking = false;
         const animations = {};
-        const cameraFollowOffset = new THREE.Vector3(0, 1, 5); // Camera offset from the model
-
+        const cameraFollowOffset = new THREE.Vector3(0, 1, 5);
+        let currentAnimation = null;
+        let modelLoaded = false; // Flag to check if the model has been loaded
+        
         function init() {
-            // Set up the renderer
+            // Get the container element
+            const container = document.getElementById('threejs-container');
+            if (!container) return;
+        
+            // Renderer setup
             renderer = new THREE.WebGLRenderer({ antialias: false });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));  // Optimize for performance
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true; // Enable shadows
+            renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
-
-            // Set up the camera
+            container.appendChild(renderer.domElement);
+        
+            // Camera setup
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, -6, 5);
-
-            // Set up the scene
+            camera.position.set(0, -2, 5);
+        
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000);
-
-            // Load textures for the floor
-            const textureLoader = new THREE.TextureLoader();
-
-            const diffuseMap = textureLoader.load('/public/textures/painted_concrete_diff_2k.jpg');
-            diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-            diffuseMap.repeat.set(50, 50);  // Adjust tiling
-
-            const roughnessMap = textureLoader.load('/public/textures/painted_concrete_rough_2k.exr');
-            roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
-            roughnessMap.repeat.set(100, 100);  // Adjust tiling
-
-            const normalMap = textureLoader.load('/public/textures/painted_concrete_nor_gl_2k.exr');
-            normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-            normalMap.repeat.set(100, 100);  // Adjust tiling
-
-            const displacementMap = textureLoader.load('/public/textures/painted_concrete_disp_2k.png');
-            displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
-            displacementMap.repeat.set(100, 100);  // Adjust tiling
-
-            // Apply these textures to the material
-            const floorMaterial = new THREE.MeshStandardMaterial({
-                map: diffuseMap,            // Base color texture
-                roughnessMap: roughnessMap,  // Roughness map for realistic surface details
-                normalMap: normalMap,        // Normal map for added depth and lighting interaction
-                displacementMap: displacementMap,  // Displacement map for geometry adjustments
-                displacementScale: 0.1,      // Adjust this value to control the intensity of the displacement
-                roughness: 0.1,              // General roughness (complemented by roughnessMap)
-                metalness: 0.4               // Adjust metalness based on your scene requirements
-            });
-
-            // Create the floor geometry and apply the material
+             
             const floor = new THREE.Mesh(
-                new THREE.PlaneGeometry(2000, 2000, 512, 512),
-                floorMaterial
-            );
+                        new THREE.BoxGeometry(2000, 0.1, 2000),
+                        new THREE.MeshStandardMaterial({ color: 0x1f2022, roughness: 0.4, metalness: 0.8 })
+                    );
             floor.receiveShadow = true;
-            floor.rotation.x = - Math.PI / 2; // Lay the plane flat
             scene.add(floor);
-
-
-            // Clock for animations
+            
             clock = new THREE.Clock();
-
-            // Load the clown model
+        
+            // Load the clown model lazily
             const loader = new THREE.GLTFLoader();
             const dracoLoader = new THREE.DRACOLoader();
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
             loader.setDRACOLoader(dracoLoader);
-
-            loader.load('/public/clownV.glb', (gltf) => {
+        
+            loader.load('https://threejs-webflow-clown.vercel.app/public/clownV.glb', (gltf) => {
                 clown = gltf.scene;
                 clown.position.set(0, 0.02, 0);
                 clown.scale.set(1.5, 1.5, 1.5);
-
-                // Adjust materials
+        
                 clown.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -100,25 +70,26 @@
                         }
                     }
                 });
-
-                // Set up animation mixer
+        
                 mixer = new THREE.AnimationMixer(clown);
                 gltf.animations.forEach((clip) => {
-                    animations[clip.name.toLowerCase()] = mixer.clipAction(clip);
+                    const animationName = clip.name.toLowerCase();
+                    animations[animationName] = mixer.clipAction(clip);
                 });
-
-                // Play default animation
+        
+                // Mark that the model is loaded
+                modelLoaded = true;
+        
+                // Start the default animation
                 playAnimation('idle');
-
                 scene.add(clown);
                 controls.target.set(0, 1.5, 0);
                 controls.update();
-
-                console.log("Clown model loaded!");
-            }, undefined, (error) => {
-                console.error('Error loading the clown model:', error);
+        
+                // Start observing sections after the model is loaded
+                observeSections();
             });
-
+        
             // OrbitControls setup
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
@@ -126,29 +97,27 @@
             controls.minDistance = 5;
             controls.maxDistance = 20;
             controls.maxPolarAngle = Math.PI / 2;
-
-            // Lighting setup
+        
             const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
             directionalLight.position.set(5, 10, 10);
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.set(1024, 1024);
             scene.add(directionalLight);
-
+        
             scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.8));
-
-            // Fixed RectAreaLight without lookAt()
+        
             const rectLight = new THREE.RectAreaLight(0xffffff, 2.5, 5, 5);
             rectLight.position.set(0, 5, 10);
-            rectLight.rotation.y = Math.PI; // Example rotation to face in a direction
+            rectLight.rotation.y = Math.PI;
             scene.add(rectLight);
-
+        
             scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-
+        
             animate();
             window.addEventListener('resize', onWindowResize);
         }
-
-        // Camera follow function, only active during "walk" animation
+        
+        // Function to follow the clown character with the camera
         function cameraFollow(target) {
             const modelPos = target.position;
             camera.position.set(
@@ -156,71 +125,87 @@
                 modelPos.y + cameraFollowOffset.y,
                 modelPos.z + cameraFollowOffset.z
             );
-            camera.lookAt(modelPos);  // Ensure the camera always looks at the model
+            camera.lookAt(modelPos);
         }
-
+        
         function playAnimation(name) {
+            if (!mixer || !animations[name]) return;
+        
+            if (currentAnimation === name) return;
+        
             mixer.stopAllAction();
-            if (animations[name]) {
-                animations[name].play();
-                // Check if it's the walk animation
-                isWalking = name === 'walk';
-            }
+            currentAnimation = name;
+            animations[name].reset().play();
+            isWalking = name === 'walk';
         }
-
-        function onWindowResize() {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        }
-
+        
         function animate() {
             requestAnimationFrame(animate);
-            if (mixer) mixer.update(clock.getDelta());
-            if (isWalking && clown) cameraFollow(clown);  // Follow model only if walking
-            controls.update();  // Keep controls enabled
+            const delta = clock.getDelta();
+            if (mixer) mixer.update(delta);
+            if (isWalking && clown) cameraFollow(clown);
+            controls.update();
             renderer.render(scene, camera);
         }
-
-        init();
-
-        // IntersectionObserver to trigger animations based on section scroll
-        document.addEventListener('DOMContentLoaded', () => {
+        
+        function onWindowResize() {
+            const container = document.getElementById('threejs-container');
+            if (container) {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+        
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+        }
+        
+        // Function to observe sections only after model is loaded
+        function observeSections() {
+            const sections = document.querySelectorAll('section[id]');
+        
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting) {
+                    if (entry.isIntersecting && modelLoaded) {
                         const sectionId = entry.target.id;
+        
                         switch (sectionId) {
+                            case 'hero':
+                                playAnimation('idle');
+                                break;
                             case 'hello':
                                 playAnimation('hello');
                                 break;
-                            case 'giveaway':
+                            case 'dance-wrapper':
                                 playAnimation('break');
                                 break;
-                            case 'capabilities':
-                                playAnimation('pose');
-                                break;
-                            case 'store':
+                            case 'capabilities-wrapper':
                                 playAnimation('walk');
                                 break;
-                            case 'thanks':
+                            case 'services-wrapper':
+                                playAnimation('pose');
+                                break;
+                            case 'testimonials':
                                 playAnimation('thanks');
                                 break;
                             case 'contactForm':
                                 playAnimation('phone');
                                 break;
-                            default:
-                                console.log(`No animation for section: ${sectionId}`);
                         }
                     }
                 });
+            }, {
+                rootMargin: '0px 0px -100px 0px',
+                threshold: 0.1
             });
-
-            // Observe all sections
-            const sections = document.querySelectorAll('section');
-            sections.forEach(section => observer.observe(section));
-        });
-    </script>
+        
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        }
+        
+        init();
+        </script>
 
 </body>
 
