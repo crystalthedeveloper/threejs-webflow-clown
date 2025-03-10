@@ -40,7 +40,7 @@ function init() {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
             loader.setDRACOLoader(dracoLoader);
 
-            loader.load('./clownV.glb', (gltf) => {
+            loader.load('/public/clownV.glb', (gltf) => {
                 clown = gltf.scene;
                 clown.position.set(0, 0.02, 0);
                 clown.scale.set(1.5, 1.5, 1.5);
@@ -141,6 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const sectionId = entry.target.id;
+                console.log(`Section ${sectionId} is visible`);
+
+                // Check if the section ID exists and play the corresponding animation
                 switch (sectionId) {
                     case 'hello':
                         playAnimation('hello');
@@ -167,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Observe all sections
-    const sections = document.querySelectorAll('section');
+    // Observe all divs with IDs directly
+    const sections = document.querySelectorAll('div[id]');
     sections.forEach(section => observer.observe(section));
 });
