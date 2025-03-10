@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Local Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+</head>
+
+<body style="margin: 0; overflow: hidden;">
+    <div id="threejs-container"></div>
+    <script>
+        // Three.js Setup
+        let scene, camera, renderer, controls, clown, mixer, clock, isWalking = false;
+        const animations = {}, cameraFollowOffset = new THREE.Vector3(0, 1, 5);
+        let currentAnimation = null, modelLoaded = false, textMesh1, textMesh2;
+
+        function init() {
+            const container = document.getElementById('threejs-container');
+            if (!container) {
+                return;
+            }
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 1000);
+            camera.position.set(0, 0, 6);
+            camera.lookAt(0, 0, 0);
+
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000);
+            clock = new THREE.Clock();
+
+            // Floor
+            const floor = new THREE.Mesh(
+                new THREE.BoxGeometry(2000, 2, 2000),
+                new THREE.MeshStandardMaterial({ color: 0x1f2022, roughness: 0.4, metalness: 0.8 })
+            );
+            floor.receiveShadow = true;
+            floor.position.set(0, -2.5, 0);
+            scene.add(floor);
+
+            // Lights
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.8));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
+            directionalLight.position.set(5, 10, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.set(1024, 1024);
+            scene.add(directionalLight);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.minDistance = 5;
+            controls.maxDistance = 20;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            // Load Model
+            loadClownModel();
+
+            // Observe Sections
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        // Load Clown Model
+        function loadClownModel() {
+            const loader = new THREE.GLTFLoader();
+            const dracoLoader = new THREE.DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+            loader.setDRACOLoader(dracoLoader);
+
+            loader.load('https://threejs-webflow-clown.vercel.app/public/clownV.glb', (gltf) => {
+                clown = gltf.scene;
+                clown.position.set(0, -1.5, 1);
+                clown.scale.set(1.5, 1.5, 1.5);
+                clown.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        if (child.material && child.material.isMeshStandardMaterial) {
+                            child.material.roughness = 0.6;
+                            child.material.metalness = 0.2;
+                        }
+                    }
+                });
+
+                // Animations
+                mixer = new THREE.AnimationMixer(clown);
+                gltf.animations.forEach((clip) => {
+                    animations[clip.name.toLowerCase()] = mixer.clipAction(clip);
+                });
+
+                modelLoaded = true;
+
+                // Hide loading screen if available
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) loadingScreen.style.display = 'none';
+
+                playAnimation('idle');
+                scene.add(clown);
+
+                // Load Background Text AFTER Model
+                setTimeout(addBackgroundText, 500);
+
+                // Observe Webflow Sections
+                observeSections();
+            });
+        }
+
+        // Play Animation Function
+        function playAnimation(name) {
+            if (!mixer || !animations[name]) return;
+            if (currentAnimation === name) return;
+            mixer.stopAllAction();
+            currentAnimation = name;
+            animations[name].reset().play();
+            isWalking = name === 'walk';
+        }
+
+        // Add 3D Text
+        function addBackgroundText() {
+            if (!modelLoaded) return;
+
+            new THREE.FontLoader().load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xffe600,
+                    metalness: 0.8,
+                    roughness: 0
+                });
+
+                const isMobile = window.innerWidth < 768;
+                const textSize = isMobile ? 1 : 2;
+
+                const textMesh1Position = isMobile ? [-3, 1.5, -12] : [-6, 2, -8];
+                const textMesh2Position = isMobile ? [-3.5, -0.2, -12] : [-7.5, -0.5, -8];
+
+                textMesh1 = new THREE.Mesh(
+                    new THREE.TextGeometry('Developer', { font, size: textSize, curveSegments: 1, height: 0.4 }),
+                    material
+                );
+                textMesh1.position.set(...textMesh1Position);
+                scene.add(textMesh1);
+
+                textMesh2 = new THREE.Mesh(
+                    new THREE.TextGeometry('& Designer', { font, size: textSize, curveSegments: 1, height: 0.2 }),
+                    material
+                );
+                textMesh2.position.set(...textMesh2Position);
+                scene.add(textMesh2);
+            });
+        }
+
+        function observeSections() {
+            const sections = document.querySelectorAll("section[id]");
+            if (sections.length === 0) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && modelLoaded) {
+                        const sectionId = entry.target.id;
+                        switch (sectionId) {
+                            case 'hero':
+                                playAnimation('idle');
+                                break;
+                            case 'services':
+                                playAnimation('pose');
+                                break;
+                            case 'testimonials':
+                                playAnimation('thanks');
+                                break;
+                            case 'contactForm':
+                                playAnimation('phone');
+                                break;
+                        }
+                    }
+                });
+            }, {
+                rootMargin: '0px 0px -100px 0px',
+                threshold: 0.1
+            });
+
+            sections.forEach(section => observer.observe(section));
+        }
+
+        setTimeout(observeSections, 1000);
+
+        // Animate
+        function animate() {
+            requestAnimationFrame(animate);
+            if (mixer) mixer.update(clock.getDelta());
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Window Resize
+        function onWindowResize() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        }
+
+        init();
+
+    </script>
+</body>
+
+</html>
